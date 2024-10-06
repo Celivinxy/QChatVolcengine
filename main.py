@@ -17,7 +17,7 @@ CMD_LIST = "角色列表"
 CMD_PROVIDER = "平台"
 CMD_CHARACTER = "角色"
 CMD_HELP = "帮助"
-SUPPORTED_PROVIDERS = ["acgn_ttson", "gpt_sovits"]
+SUPPORTED_PROVIDERS = ["acgn_ttson", "gpt_sovits", "doubao_tts"]
 
 
 @operator_class(name="ncv", help="获取帮助请输入：！ncv 帮助", privilege=1)
@@ -47,6 +47,9 @@ class SwitchVoicePlugin(CommandOperator):
         if provider == "gpt_sovits":
             emotion = user_prefer[provider]["emotion"]
             return_text += f"\n使用的情感为：{emotion}"
+        elif provider == "doubao_tts":
+            emotion = user_prefer[provider]["emotion"]
+            return_text += f"\n使用的情感为：{emotion}"
         return return_text
 
     async def list_characters(self, sender_id):
@@ -71,6 +74,18 @@ class SwitchVoicePlugin(CommandOperator):
                            "切换角色使用对应角色的名称和情感，例如切换角色为胡桃，情感为default: \n"
                            f"!ncv 角色 Hutao default"
                            )
+        elif provider_name == "doubao_tts":
+            data = await self.ncv.get_character_list(provider_name)
+            character_list = ""
+            for name, emotions in data.items():
+                emotions_str = ",".join(emotions)
+                character_list += f"{name}：{emotions_str}\n"
+            return_text = (f"当前TTS平台：{provider_name}\n"
+                           "角色列表：\n"
+                           f"{character_list}\n"
+                           "切换角色使用对应角色的名称和情感，例如切换角色为胡桃，情感为default: \n"
+                           f"!ncv 角色 Hutao default"
+                           )
         return return_text
 
     async def switch_provider(self, sender_id, provider_name: str):
@@ -84,6 +99,11 @@ class SwitchVoicePlugin(CommandOperator):
             response = await self.ncv.update_character_config(sender_id, provider_name, {"character_id": character_id})
 
         elif provider_name == "gpt_sovits":
+            character_name = character_info["character_name"]
+            emotion = character_info["emotion"]
+            response = await self.ncv.update_character_config(sender_id, provider_name,
+                                                              {"character_name": character_name, "emotion": emotion})
+        elif provider_name == "doubao_tts":
             character_name = character_info["character_name"]
             emotion = character_info["emotion"]
             response = await self.ncv.update_character_config(sender_id, provider_name,
@@ -124,7 +144,11 @@ class SwitchVoicePlugin(CommandOperator):
                     emotion = context.crt_params[2]
                     result = await self.switch_character(sender_id,
                                                          {"character_name": character_name, "emotion": emotion})
-
+                elif provider == "doubao_tts":
+                    character_name = context.crt_params[1]
+                    emotion = context.crt_params[2]
+                    result = await self.switch_character(sender_id,
+                                                         {"character_name": character_name, "emotion": emotion})
         elif command in [CMD_HELP, "help"]:
             result = (
                 "NewChatVoice语音合成插件,一个可以生成多种音色的语音对话插件 \n"

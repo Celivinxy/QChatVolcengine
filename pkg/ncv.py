@@ -37,6 +37,8 @@ class NCV:
             return await provider.check_token()
         elif provider_name == "gpt_sovits":
             return await provider.get_character_list()
+        elif provider_name == "doubao_tts":
+            return await provider.get_character_list()
         return None
 
     async def get_character_list(self, provider_name: str) -> List[Dict[str, Any]]:
@@ -51,7 +53,7 @@ class NCV:
 
     def update_user_provider(self, user_id: int, provider_name: str) -> str:
         # 更新用户的TTS服务提供者
-        if provider_name not in ["acgn_ttson", "gpt_sovits"]:
+        if provider_name not in ["acgn_ttson", "gpt_sovits", "doubao_tts"]:
             return f"无效的TTS平台名称：{provider_name}"
 
         preferences = self.load_user_preference(user_id)
@@ -107,7 +109,21 @@ class NCV:
                     return f"角色名称 {character_name} 和情感 {emotion} 在 gpt_sovits 的角色列表中未找到。"
             else:
                 return "未提供 gpt_sovits 的角色名称或情感。"
-
+        elif provider_name == "doubao_tts":
+            character_name = config_updates.get("character_name")
+            emotion = config_updates.get("emotion")
+            if character_name is not None and emotion is not None:
+                # character_list示例：{'Hutao': ['default'], '申鹤': ['default']}
+                if character_name in character_list and emotion in character_list[character_name]:
+                    
+                    preferences[provider_name]["character_name"] = character_name
+                    preferences[provider_name]["emotion"] = emotion
+                    self.user_data_manager._save_user_preference(user_id, preferences)
+                    return f"用户 {user_id} 的 doubao_tts 角色名称更新为 {character_name}，情感更新为 {emotion}。"
+                else:
+                    return f"角色名称 {character_name} 和情感 {emotion} 在 doubao_tts 的角色列表中未找到。"
+            else:
+                return "未提供 doubao_tts 的角色名称或情感。"
         else:
             return f"未知的TTS平台: {provider_name}"
 
@@ -143,6 +159,13 @@ class NCV:
             for sentence in short_sentences:
                 audio_path = await provider.generate_audio(sentence, character_name=character_name, emotion=emotion)
                 voice_paths.append(audio_path)
+        elif provider_name == "doubao_tts":
+            character_name = user_preference.get("doubao_tts", {}).get("character_name",
+                                                                       provider_config["character_name"])
+            emotion = user_preference.get("doubao_tts", {}).get("emotion", provider_config["emotion"])
+            for sentence in short_sentences:
+                audio_path = await provider.generate_audio(sentence, character_name=character_name, emotion=emotion)
+                voice_paths.append(audio_path)
         else:
             raise ValueError(f"未知的TTS平台: {provider_name}")
 
@@ -168,6 +191,11 @@ class NCV:
             character_name = user_preference.get("gpt_sovits", {}).get("character_name",
                                                                        provider_config["character_name"])
             emotion = user_preference.get("gpt_sovits", {}).get("emotion", provider_config["emotion"])
+            audio_path = await provider.generate_audio(text, character_name=character_name, emotion=emotion)
+        elif provider_name == "doubao_tts":
+            character_name = user_preference.get("doubao_tts", {}).get("character_name",
+                                                                       provider_config["character_name"])
+            emotion = user_preference.get("doubao_tts", {}).get("emotion", provider_config["emotion"])
             audio_path = await provider.generate_audio(text, character_name=character_name, emotion=emotion)
         else:
             raise ValueError(f"未知的TTS平台: {provider_name}")

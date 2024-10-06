@@ -92,6 +92,14 @@ INFO:     Uvicorn running on http://0.0.0.0:5000 (Press CTRL+C to quit)
     "batch_size": 1,
     "speed": 1.0,
     "save_temp": true
+  },
+  "doubao_tts": {
+    "url": "http://127.0.0.1:5000",
+    "character_name": "Hutao",
+    "emotion": "default",
+    "batch_size": 1,
+    "speed": 1.0,
+    "save_temp": true
   }
 }
 
