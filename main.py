@@ -249,3 +249,59 @@ class VoicePlugin(BasePlugin):
 
     def __del__(self):
         pass
+    
+    async def ncv_gen_text_to_voice(self, ctx: EventContext, sender_id: str, text: str) -> Voice:
+        user_prefer = self.ncv.load_user_preference(sender_id)
+        ctx.prevent_default()
+        target_type = str(ctx.event.query.launcher_type).split('.')[-1].lower()
+        try:
+            if target_type == "person":
+                audio_path = await self.ncv.no_split_generate_audio(sender_id, text)
+                if audio_path:
+                    return audio_path
+                else:
+                    raise ValueError("Failed to generate audio path without split.")
+            elif target_type == "group":
+                audio_paths = await self.ncv.auto_split_generate_audio(sender_id, text)
+                if audio_paths:
+                    return audio_paths
+                else:
+                    raise ValueError("Failed to generate audio paths with auto split.")
+        except Exception as e:
+            print(f"Error in ncv_outside_interface: {str(e)}")
+            return None
+        
+    async def ncv_send_voice(self, ctx: EventContext, text: str, audio_path_result: Voice):
+        target_type = str(ctx.event.query.launcher_type).split('.')[-1].lower()
+        sender_id = ctx.event.sender_id
+        group_id = ctx.event.launcher_id
+        text=text.replace(" ","")
+        text=text.replace("*","")        
+
+        if target_type == "person":
+            receiver_id = sender_id
+            single_audio_path = audio_path_result
+            if single_audio_path:
+                # print(single_audio_path)
+                # base64编码
+                with open(single_audio_path, "rb") as f:
+                    base64_audio = base64.b64encode(f.read()).decode()
+                await ctx.send_message(target_type, receiver_id, [Voice(base64=base64_audio)])
+            # await ctx.send_message(target_type, receiver_id, [Voice(path=str(single_audio_path))])
+        elif target_type == "group":
+            receiver_id = group_id
+            audio_paths = audio_path_result
+            if audio_paths:
+                for audio_path in audio_paths:
+                    # base64编码
+                    with open(audio_path, "rb") as f:
+                        base64_audio = base64.b64encode(f.read()).decode()
+                    await ctx.send_message(target_type, receiver_id, [Voice(base64=base64_audio)])
+                    # await ctx.send_message(target_type, receiver_id, [Voice(path=str(audio_path))])
+            if self.voiceWithText:
+                await ctx.send_message(target_type, receiver_id, [Plain(text)])
+
+
+class VoiceSynthesisError(Exception):
+    """自定义异常类，用于语音合成错误"""
+    pass
