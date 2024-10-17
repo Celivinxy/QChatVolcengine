@@ -288,6 +288,8 @@ class VoicePlugin(BasePlugin):
                     base64_audio = base64.b64encode(f.read()).decode()
                 await ctx.send_message(target_type, receiver_id, [Voice(base64=base64_audio)])
             # await ctx.send_message(target_type, receiver_id, [Voice(path=str(single_audio_path))])
+            if self.voiceWithText:
+                await ctx.send_message(target_type, receiver_id, [Plain(text)])
         elif target_type == "group":
             receiver_id = group_id
             audio_paths = audio_path_result
