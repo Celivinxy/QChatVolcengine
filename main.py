@@ -8,6 +8,7 @@ from pkg.plugin.events import *
 from pkg.command import entities
 from pkg.command.operator import CommandOperator, operator_class
 from .pkg.ncv import NCV
+from pkg.utils.logutil import LogUtil
 
 # 定义命令常量
 CMD_ON = "开启"
@@ -191,6 +192,7 @@ class VoicePlugin(BasePlugin):
         self.voiceWithText = global_config.get('voiceWithText', False)
         temp_dir_path = global_config.get('temp_dir_path', 'temp/')
         self._clear_temp_dir(temp_dir_path)
+        self.logger = LogUtil.get_instance().get_logger('NewChatVoice')
 
     def _load_global_config(self):
         try:
@@ -251,13 +253,16 @@ class VoicePlugin(BasePlugin):
         pass
     
     async def ncv_gen_text_to_voice(self, ctx: EventContext, sender_id: str, text: str) -> Voice:
+        self.logger.info(f"开始为用户 {sender_id} 生成语音")
         user_prefer = self.ncv.load_user_preference(sender_id)
         ctx.prevent_default()
         target_type = str(ctx.event.query.launcher_type).split('.')[-1].lower()
         try:
             if target_type == "person":
+                self.logger.info(f"生成私聊语音 - 用户: {sender_id}, 文本长度: {len(text)}")
                 audio_path = await self.ncv.no_split_generate_audio(sender_id, text)
                 if audio_path:
+                    self.logger.info(f"语音生成成功: {audio_path}")
                     return audio_path
                 else:
                     raise ValueError("Failed to generate audio path without split.")
@@ -268,7 +273,7 @@ class VoicePlugin(BasePlugin):
                 else:
                     raise ValueError("Failed to generate audio paths with auto split.")
         except Exception as e:
-            print(f"Error in ncv_outside_interface: {str(e)}")
+            self.logger.error(f"语音生成失败: {str(e)}")
             return None
         
     async def ncv_send_voice(self, ctx: EventContext, text: str, audio_path_result: Voice):
